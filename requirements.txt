@@ -4,3 +4,6 @@ datasets
 numpy 
 pandas
 bitsandbytes
+flask
+plotly
+scikit-learn
