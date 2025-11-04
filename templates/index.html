@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sentiment Analyser Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { background: #f8f9fa; padding: 2rem; }
+        .section-title { margin-top: 2rem; }
+        .plot-card { border-radius: 12px; padding: 1rem; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        footer { margin-top: 3rem; font-size: 0.9em; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="mb-4 text-primary">Sentiment Analyser Dashboard</h1>
+    <p class="text-muted">
+        This dashboard visualizes how your multilingual sentiment model performs across 13 Indian languages.
+        It provides insights on confidence levels, label distributions, and high-dimensional embedding relationships.
+    </p>
+
+    <!-- 📊 Language-wise Confidence Table -->
+    <h4 class="section-title">Language-wise Confidence Summary</h4>
+    <p class="text-secondary">
+        Each row shows how confidently the model predicts across different languages. 
+        <i>Higher mean confidence</i> suggests better calibration or familiarity with that language’s text style.
+    </p>
+
+    <div class="table-responsive shadow-sm rounded bg-white p-2">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Language</th>
+                    <th>Label Distribution</th>
+                    <th>Mean Confidence</th>
+                    <th>Std</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                </tr>
+            </thead>
+            <tbody id="langTable"></tbody>
+        </table>
+    </div>
+
+    <h4 class="section-title">Model Confidence Analysis</h4>
+    <p class="text-secondary">
+        These visualizations show how confident your model is when making predictions, 
+        both globally and across languages.
+    </p>
+    <div id="confidencePlot" class="plot-card mb-4" style="height:400px;"></div>
+
+    <h4 class="section-title">t-SNE Embedding Visualization</h4>
+    <p class="text-secondary">
+        The t-SNE plot shows how sentence embeddings cluster in the model’s latent space. 
+        If sentences from similar languages group closely, it indicates strong multilingual generalization.
+    </p>
+    <div id="tsnePlot" class="plot-card mb-4" style="height:500px;"></div>
+
+    <footer class="text-center">
+        Built for NPPE-1 Multilingual Sentiment Analysis • Flask + Plotly Dashboard © 2025
+    </footer>
+</div>
+
+<!-- Load Data + Plotly Visuals -->
+<script>
+fetch("/api/lang-summary")
+  .then(res => res.json())
+  .then(data => {
+    const tableBody = document.getElementById("langTable");
+    data.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${row.language}</td>
+        <td>${row.label_distribution}</td>
+        <td>${row.conf_mean.toFixed(3)}</td>
+        <td>${row.conf_std.toFixed(3)}</td>
+        <td>${row.conf_min.toFixed(3)}</td>
+        <td>${row.conf_max.toFixed(3)}</td>
+      `;
+      tableBody.appendChild(tr);
+    });
+
+    // --- Mean Confidence Plot ---
+    const confPlot = {
+      x: data.map(d => d.language),
+      y: data.map(d => d.conf_mean),
+      text: data.map(d => `±${d.conf_std.toFixed(3)}`),
+      type: "bar",
+      marker: { color: "rgba(0,123,255,0.6)" },
+      hovertemplate:
+        "<b>%{x}</b><br>Mean Confidence: %{y:.3f}<br>Std: %{text}<extra></extra>"
+    };
+
+    Plotly.newPlot("confidencePlot", [confPlot], {
+      title: "Mean Confidence per Language",
+      xaxis: { title: "Language", tickangle: -45 },
+      yaxis: { title: "Confidence", range: [0, 1] },
+      margin: { t: 40, b: 120 },
+      autosize: true
+    }, {responsive: true});
+
+    // --- Enhanced t-SNE Scatter Plot ---
+    // Here we simulate a few example data points with mock metadata.
+    // In a real setup, you’ll pass actual t-SNE embeddings + metadata from your backend.
+    const tsneData = Array.from({length: 50}, (_, i) => ({
+      x: Math.random() * 10,
+      y: Math.random() * 10,
+      language: data[i % data.length].language,
+      label: Math.random() > 0.5 ? "Positive" : "Negative",
+      confidence: (Math.random() * 0.3 + 0.7).toFixed(2),
+      text: "Sample sentence " + (i + 1)
+    }));
+
+    const tsnePlot = {
+      x: tsneData.map(p => p.x),
+      y: tsneData.map(p => p.y),
+      mode: "markers",
+      type: "scatter",
+      marker: {
+        size: 10,
+        color: tsneData.map(p => p.label === "Positive" ? "rgba(0,200,100,0.7)" : "rgba(255,99,132,0.7)"),
+        line: { width: 1, color: "white" }
+      },
+      text: tsneData.map(
+        p => `<b>${p.language}</b><br>Label: ${p.label}<br>Conf: ${p.confidence}<br>${p.text}`
+      ),
+      hovertemplate: "%{text}<extra></extra>"
+    };
+
+    Plotly.newPlot("tsnePlot", [tsnePlot], {
+      title: "t-SNE Sentence Embeddings",
+      xaxis: { visible: false },
+      yaxis: { visible: false },
+      margin: { t: 40 },
+      autosize: true
+    }, {responsive: true});
+  });
+</script>
+
+
+</body>
+</html>
