@@ -1,9 +1,6 @@
-transformers 
-torch
-datasets
+gunicorn
 numpy 
 pandas
-bitsandbytes
 flask
 plotly
 scikit-learn
